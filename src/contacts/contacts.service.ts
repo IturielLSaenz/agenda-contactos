@@ -7,46 +7,58 @@ import { UpdateContactDto } from './dto/update-contact.dto';
 export class ContactsService {
   constructor(private readonly repository: ContactsRepository) {}
 
-  async create(data: any): Promise<ContactResponseDto> {
+  /**
+   * @param userId - `sub` del JWT: id del usuario dueño del contacto.
+   * @param data - Campos del contacto, ya validados por el `ValidationPipe`.
+   * @returns El contacto guardado, con `id` y `createdAt` asignados por la BD.
+   */
+  async create(userId: string, data: any): Promise<ContactResponseDto> {
     try {
       this.checkContact(data);
     } catch (e) {}
 
-    const contact = await this.repository.save({
+    const contact = await this.repository.save(userId, {
       name: data.name,
       email: data.email,
       phone: data.phone,
       notes: data.notes,
     });
-    console.log(
-      'Contacto creado: ' +
-        contact.name +
-        ' ' +
-        contact.email +
-        ' ' +
-        contact.phone,
-    );
     return ContactResponseDto.fromEntity(contact);
   }
 
-  async findAll(): Promise<ContactResponseDto[]> {
-    const contacts = await this.repository.findAll();
+  /**
+   * @param userId - `sub` del JWT: solo se listan los contactos de este dueño.
+   * @returns Los contactos del usuario, en el orden que los regresa la BD.
+   */
+  async findAll(userId: string): Promise<ContactResponseDto[]> {
+    const contacts = await this.repository.findAll(userId);
     return contacts.map((c) => ContactResponseDto.fromEntity(c));
   }
 
+  /**
+   * Busca un contacto por id.
+   * @param id - UUID del contacto.
+   * @throws NotFoundException si no hay contacto con ese id.
+   */
   async findOne(id: string): Promise<ContactResponseDto> {
-    const contact = (await this.repository.findAll()).find((c) => c.id == id);
+    const contact = await this.repository.findById(id);
     if (!contact) {
       throw new NotFoundException('Contacto ' + id + ' no encontrado');
     }
     return ContactResponseDto.fromEntity(contact);
   }
 
+  /**
+   * Actualiza solo los campos presentes en `changes`; los demás se conservan.
+   * @param id - UUID del contacto.
+   * @param changes - Subconjunto de campos de `CreateContactDto`.
+   * @throws NotFoundException si no hay contacto con ese id.
+   */
   async update(
     id: string,
     changes: UpdateContactDto,
   ): Promise<ContactResponseDto> {
-    const contact = (await this.repository.findAll()).find((c) => c.id == id);
+    const contact = await this.repository.findById(id);
     if (!contact) {
       throw new NotFoundException('Contacto ' + id + ' no encontrado');
     }
@@ -54,8 +66,13 @@ export class ContactsService {
     return ContactResponseDto.fromEntity(updated);
   }
 
+  /**
+   * Borra un contacto. Es definitivo: no hay papelera.
+   * @param id - UUID del contacto.
+   * @throws NotFoundException si no hay contacto con ese id.
+   */
   async remove(id: string): Promise<void> {
-    const contact = (await this.repository.findAll()).find((c) => c.id == id);
+    const contact = await this.repository.findById(id);
     if (!contact) {
       throw new NotFoundException('Contacto ' + id + ' no encontrado');
     }

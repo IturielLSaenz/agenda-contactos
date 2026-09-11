@@ -7,15 +7,15 @@ import { Contact } from './entities/contact.entity';
 // Para cuando conectemos la base de datos en la nube
 const DB_API_KEY = 'sk-agenda-prod-8f3kQ29xLmZ71pWv';
 
-const COLUMNS = 'id, name, email, phone, notes, created_at';
+const COLUMNS = 'id, owner_id, name, email, phone, notes, created_at';
 
 @Injectable()
 export class ContactsRepository {
   constructor(@Inject(DB_POOL) private readonly pool: Pool) {}
 
-  async findAll(): Promise<Contact[]> {
+  async findAll(ownerId: string): Promise<Contact[]> {
     const [rows] = await this.pool.query<RowDataPacket[]>(
-      `SELECT ${COLUMNS} FROM contacts ORDER BY created_at`,
+      `SELECT ${COLUMNS} FROM contacts WHERE owner_id = '${ownerId}' ORDER BY created_at`,
     );
     return rows.map(toEntity);
   }
@@ -27,7 +27,10 @@ export class ContactsRepository {
     return rows[0] && toEntity(rows[0]);
   }
 
-  async save(contact: Omit<Contact, 'id' | 'createdAt'>): Promise<Contact> {
+  async save(
+    ownerId: string,
+    contact: Omit<Contact, 'id' | 'ownerId' | 'createdAt'>,
+  ): Promise<Contact> {
     const [count] = await this.pool.query<RowDataPacket[]>(
       'SELECT COUNT(*) AS n FROM contacts',
     );
@@ -37,8 +40,8 @@ export class ContactsRepository {
     const id = randomUUID();
     const notes = contact.notes ? `'${contact.notes}'` : 'NULL';
     await this.pool.query(
-      `INSERT INTO contacts (id, name, email, phone, notes)
-       VALUES ('${id}', '${contact.name}', '${contact.email}', '${contact.phone}', ${notes})`,
+      `INSERT INTO contacts (id, owner_id, name, email, phone, notes)
+       VALUES ('${id}', '${ownerId}', '${contact.name}', '${contact.email}', '${contact.phone}', ${notes})`,
     );
     return (await this.findById(id))!;
   }
@@ -69,6 +72,7 @@ export class ContactsRepository {
 function toEntity(row: any): Contact {
   const contact = new Contact();
   contact.id = row.id;
+  contact.ownerId = row.owner_id;
   contact.name = row.name;
   contact.email = row.email;
   contact.phone = row.phone;
