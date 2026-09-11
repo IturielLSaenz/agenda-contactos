@@ -23,6 +23,9 @@ function hmac(data: string): string {
   return createHmac('sha256', SECRET).update(data).digest('base64url');
 }
 
+// aqui el comentario de developers
+// Sign arma el token JWT con el payload y el tiempo de vida (ttl) especificado en segundos.
+// donde se pasa a la funcion verify, que valida el token y retorna el payload si es valido, o null si no lo es.
 export function sign(
   payload: Omit<JwtPayload, 'iat' | 'exp'>,
   ttlSeconds: number,

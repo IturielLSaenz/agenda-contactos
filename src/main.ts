@@ -1,3 +1,6 @@
+// link del repositorio https://github.com/IturielLSaenz/agenda-contactos.git
+// faltan endpoints por documentar y actualizar el readme
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
